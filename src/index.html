@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Document</title>
+	<style>
+		body, input, select, textarea {
+			font-size: 14px;
+			font-family: Arial, Helvetica, sans-serif;
+		}
+		h1 {
+			font-size: 20px;
+		}
+		li {
+			padding: 4px 0;
+		}
+		input, select, textarea {
+			border: #666 solid 1px;
+			border-radius: 4px;
+			line-height: 1.4;
+		}
+		input:invalid {
+			background-color: #fcc9;
+			color: #900;
+		}
+		input[type=number] {
+			text-align: right;
+			width: 6em;
+		}
+		#json, #jsonvalid {
+			white-space: pre-wrap;
+		}
+		.validate {
+			color: #900;
+		}
+	</style>
+	<script type="module" src="./js/index.js"></script>
+	<script type="module">
+		import { bind, validator, builtinRules } from "./js/index.js";
+
+		// You can add any rules you like.
+		builtinRules['phone'] = (target, p, value) => {
+			if (!value) return '';
+			if (value.replace(/[-+]/g, '').length <= 10) return 'Too short';
+			if (!/^[+][-0-9]+$/.test(value)) return 'Invalid format.';
+			return '';
+		};
+
+		// target object.
+		const user = {
+			username: 'John Doe',
+			phonenum: '+81301231234',
+			budgetlow: '0',
+			budgethigh: '1000',
+			admin: '1',
+			category: 'local',
+			note: 'Lorem\nipsum dolor sit amet consectetur, adipisicing elit.'
+		};
+
+		// validation rules.
+		const userRules = {
+			username: ['required'],
+			phonenum: ['required', 'phone'],
+			budgetlow: ['number', 'lower^budgethigh:number'],
+			budgethigh: ['number', 'higher^budgetlow:number'],
+			note: (target, p, value) => {
+				// custom validator: does not allow the first sentence that does not begin with the "Lorem" phrase.
+				if (!value.startsWith('Lorem')) return 'Invalid value.';
+				return '';
+			},
+		};
+
+		// validation results.
+		const userValidate = {};
+
+		document.addEventListener('DOMContentLoaded', () => {
+			const form = document.querySelector('#form1');
+
+			// validator returns proxy object.
+			const userValidator = validator(
+				user,
+				userRules,
+				// when the form want to get feedback from validator, bind the proxy from the validator and set the form object and asValidator flag to here.
+				bind(
+					userValidate,
+					{
+						form,
+						asValidator: true,     // uses the form to set :invalid status, not value.
+						idprefix: 'validate-', // binds the message element that element id starts with 'validate-'.
+					}
+				)
+			);
+
+			// Using the validator with html form, the validator proxy is wrapped by the form proxy.
+			// And uses the form proxy to change the property value directly. like:
+			// proxy = bind(validator(obj, { form, asValidator: true }), { form })
+
+			// bind returns proxy object.
+			const userProxy = bind(
+				userValidator,
+				{
+					form,
+					duration: 500,		// after input, it does not reflected immediately, waited 500ms for the next input.
+					callback: show,		// called back when the value is changed.
+				},
+			);
+			show();
+
+			document.querySelector('#clearBtn').addEventListener('click', () => {
+				// when you want to change the values, you must use the proxy object, not the original object.
+				userProxy.username = '';
+				userProxy.phonenum = '';
+				userProxy.admin = '';
+				userProxy.category = '';
+				userProxy.note = '';
+
+				// or if you don't need to hook the changes, you can use the original object, directly.
+				// (obviously, the changes will not be reflected in the element and no change events will be fired.)
+			});
+		});
+
+		// show function is called when the proxy handles changing properties' value.
+		function show(p, v) {
+			document.querySelector('#json').textContent = JSON.stringify(user, null, '\t');
+			document.querySelector('#jsonvalid').textContent = JSON.stringify(userValidate, null, '\t');
+		}
+	</script>
+</head>
+<body>
+	<article>
+		<h1>Json Data:</h1>
+		<div id="json"></div>
+	</article>
+	<article>
+		<h1>Input Form:</h1>
+		<form id="form1">
+			<ul>
+				<li>
+					<label for="username">User Name:<span id="validate-username" class="validate"></span></label><br>
+					<input type="text" id="username" name="username">
+				</li>
+				<li>
+					<label for="phonenum">Phone:<span id="validate-phonenum" class="validate"></span></label></label><br>
+					<input type="tel" id="phonenum" name="phonenum">
+				</li>
+				<li>
+					<label for="phonenum">Budget:<span id="validate-budgetlow" class="validate"></span><span id="validate-budgethigh" class="validate"></span></label></label><br>
+					<input type="number" id="budgetlow" name="budgetlow">
+					to
+					<input type="number" id="budgethigh" name="budgethigh">
+				</li>
+				<li>
+					<label for="category">Category:<span id="validate-category" class="validate"></span></label><br>
+					<select id="category" name="category">
+						<option value=""></option>
+						<option value="local">Local</option>
+						<option value="global">Global</option>
+					</select>
+				</li>
+				<li>
+					<label for="admin">Administrator:</label><br>
+					<input type="checkbox" id="admin" name="admin" value="1">
+				</li>
+				<li>
+					<label for="note">Note:</label><br>
+					<textarea id="note" name="note" rows="3"></textarea>
+				</li>
+			</ul>
+			<button type="button" id="clearBtn">Clear</button><br>
+		</form>
+	</article>
+	<article>
+		<h1>Messages From Validator:</h1>
+		<div id="jsonvalid"></div>
+	</article>
+</body>
+</html>

@@ -1,0 +1,12 @@
+{
+  "name": "binding-and-validation-example",
+  "version": "1.0.0",
+  "description": "Example to bind javascript object to the html form and attach custom validations to the html form based on pure javascript.",
+  "main": "src/js/index.js",
+  "scripts": {
+    "start": "cd src && http-server",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Tomoaki Takahashi",
+  "license": "MIT"
+}
